@@ -12,7 +12,7 @@ def int_tuple(s):
 
 
 def find_nan(variable, var_name):
-    variable_n = variable.data.cpu().numpy()
+    variable_n = variable.detach().cpu().numpy()
     if np.isnan(variable_n).any():
         exit('%s has nan' % var_name)
 
@@ -32,12 +32,12 @@ def lineno():
 
 def get_total_norm(parameters, norm_type=2):
     if norm_type == float('inf'):
-        total_norm = max(p.grad.data.abs().max() for p in parameters)
+        total_norm = max(p.grad.detach().abs().max() for p in parameters)
     else:
         total_norm = 0
         for p in parameters:
             try:
-                param_norm = p.grad.data.norm(norm_type)
+                param_norm = p.grad.detach().norm(norm_type)
                 total_norm += param_norm**norm_type
                 total_norm = total_norm**(1. / norm_type)
             except:

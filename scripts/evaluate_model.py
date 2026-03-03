@@ -2,7 +2,9 @@ import argparse
 import os
 import torch
 
-from attrdict import AttrDict
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+from types import SimpleNamespace as AttrDict
 
 from sgan.data.loader import data_loader
 from sgan.models import TrajectoryGenerator
@@ -16,7 +18,7 @@ parser.add_argument('--dset_type', default='test', type=str)
 
 
 def get_generator(checkpoint):
-    args = AttrDict(checkpoint['args'])
+    args =AttrDict(**checkpoint['args'])
     generator = TrajectoryGenerator(
         obs_len=args.obs_len,
         pred_len=args.pred_len,
@@ -36,7 +38,7 @@ def get_generator(checkpoint):
         grid_size=args.grid_size,
         batch_norm=args.batch_norm)
     generator.load_state_dict(checkpoint['g_state'])
-    generator.cuda()
+    generator.to(device)
     generator.train()
     return generator
 
@@ -60,7 +62,7 @@ def evaluate(args, loader, generator, num_samples):
     total_traj = 0
     with torch.no_grad():
         for batch in loader:
-            batch = [tensor.cuda() for tensor in batch]
+            batch = [tensor.to(device) for tensor in batch]
             (obs_traj, pred_traj_gt, obs_traj_rel, pred_traj_gt_rel,
              non_linear_ped, loss_mask, seq_start_end) = batch
 
@@ -104,7 +106,7 @@ def main(args):
     for path in paths:
         checkpoint = torch.load(path)
         generator = get_generator(checkpoint)
-        _args = AttrDict(checkpoint['args'])
+        _args = AttrDict(**checkpoint['args'])
         path = get_dset_path(_args.dataset_name, args.dset_type)
         _, loader = data_loader(_args, path)
         ade, fde = evaluate(_args, loader, generator, args.num_samples)

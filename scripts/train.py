@@ -8,6 +8,8 @@ import time
 from collections import defaultdict
 
 import torch
+
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 import torch.nn as nn
 import torch.optim as optim
 
@@ -362,7 +364,7 @@ def main(args):
 def discriminator_step(
     args, batch, generator, discriminator, d_loss_fn, optimizer_d
 ):
-    batch = [tensor.cuda() for tensor in batch]
+    batch = [tensor.to(device) for tensor in batch]
     (obs_traj, pred_traj_gt, obs_traj_rel, pred_traj_gt_rel, non_linear_ped,
      loss_mask, seq_start_end) = batch
     losses = {}
@@ -400,7 +402,7 @@ def discriminator_step(
 def generator_step(
     args, batch, generator, discriminator, g_loss_fn, optimizer_g
 ):
-    batch = [tensor.cuda() for tensor in batch]
+    batch = [tensor.to(device) for tensor in batch]
     (obs_traj, pred_traj_gt, obs_traj_rel, pred_traj_gt_rel, non_linear_ped,
      loss_mask, seq_start_end) = batch
     losses = {}
@@ -425,7 +427,7 @@ def generator_step(
     g_l2_loss_sum_rel = torch.zeros(1).to(pred_traj_gt)
     if args.l2_loss_weight > 0:
         g_l2_loss_rel = torch.stack(g_l2_loss_rel, dim=1)
-        for start, end in seq_start_end.data:
+        for start, end in seq_start_end:
             _g_l2_loss_rel = g_l2_loss_rel[start:end]
             _g_l2_loss_rel = torch.sum(_g_l2_loss_rel, dim=0)
             _g_l2_loss_rel = torch.min(_g_l2_loss_rel) / torch.sum(
@@ -468,7 +470,7 @@ def check_accuracy(
     generator.eval()
     with torch.no_grad():
         for batch in loader:
-            batch = [tensor.cuda() for tensor in batch]
+            batch = [tensor.to(device) for tensor in batch]
             (obs_traj, pred_traj_gt, obs_traj_rel, pred_traj_gt_rel,
              non_linear_ped, loss_mask, seq_start_end) = batch
             linear_ped = 1 - non_linear_ped
@@ -511,7 +513,7 @@ def check_accuracy(
             f_disp_error_l.append(fde_l.item())
             f_disp_error_nl.append(fde_nl.item())
 
-            loss_mask_sum += torch.numel(loss_mask.data)
+            loss_mask_sum += torch.numel(loss_mask)
             total_traj += pred_traj_gt.size(1)
             total_traj_l += torch.sum(linear_ped).item()
             total_traj_nl += torch.sum(non_linear_ped).item()
