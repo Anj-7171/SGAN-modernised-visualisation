@@ -1,4 +1,5 @@
 # Social GAN
+Updated the existing implementation with the latest libraries. Also added a visualisation module to it.
 
 This is the code for the paper
 
