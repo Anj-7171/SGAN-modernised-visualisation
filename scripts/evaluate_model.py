@@ -1,6 +1,7 @@
 import argparse
 import os
 import torch
+from visualisation import plot_trajectories
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -61,6 +62,7 @@ def evaluate(args, loader, generator, num_samples):
     ade_outer, fde_outer = [], []
     total_traj = 0
     with torch.no_grad():
+        visualised = False
         for batch in loader:
             batch = [tensor.to(device) for tensor in batch]
             (obs_traj, pred_traj_gt, obs_traj_rel, pred_traj_gt_rel,
@@ -76,6 +78,30 @@ def evaluate(args, loader, generator, num_samples):
                 pred_traj_fake = relative_to_abs(
                     pred_traj_fake_rel, obs_traj[-1]
                 )
+                # ---- VISUALISE ONLY ONCE ----
+                if not visualised:
+                  # Single pedestrian (clean view)
+                  plot_trajectories(
+                      obs_traj,
+                      pred_traj_gt,
+                      pred_traj_fake,
+                      ped_id=0,
+                      save_path="images/ped0.png",
+                      show=True,
+                      title="Single Pedestrian Prediction"
+                  )
+
+                  # All pedestrians (scene context)
+                  plot_trajectories(
+                      obs_traj,
+                      pred_traj_gt,
+                      pred_traj_fake,
+                      save_path="images/full_scene.png",
+                      show=False,
+                      title="Full Scene"
+                  )
+
+                  visualised = True
                 ade.append(displacement_error(
                     pred_traj_fake, pred_traj_gt, mode='raw'
                 ))
@@ -104,6 +130,7 @@ def main(args):
         paths = [args.model_path]
 
     for path in paths:
+        os.makedirs("images", exist_ok=True)
         checkpoint = torch.load(path)
         generator = get_generator(checkpoint)
         _args = AttrDict(**checkpoint['args'])
